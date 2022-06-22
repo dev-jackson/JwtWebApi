@@ -22,12 +22,37 @@ public class AuthController : ControllerBase
         return Ok(user);
     }
 
+    [HttpPost("login")]
+    public ActionResult<string> Login([FromBody] UserDto request)
+    {
+        if (user.Username == request.Username)
+        {
+            return BadRequest("User not found.");
+        }
+
+        if (!VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
+        {
+            return BadRequest("Wrong password");
+        }
+
+        return Ok("My token");
+    }
+
     private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
     {
         using (var hmac = new HMACSHA512())
         {
             passwordSalt = hmac.Key;
             passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
+        }
+    }
+
+    private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+    {
+        using (var hmac = new HMACSHA512(passwordSalt))
+        {
+            var computeHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(passwordHash.ToString()!));
+            return computeHash.SequenceEqual(passwordHash);
         }
     }
 }
